@@ -64,13 +64,16 @@ class GameSolver(GameSession):
 
     def forward(self):
         if self.cnode:
-            next_node = self.cnode.choose_path() or self.cnode.parent
-            self.move_to(next_node.pos)
-            next_node.visited = True
-            if not self.win() and not self.lose():
-                if not next_node.has_childs():
-                    next_node.set_childs(self.discover())
-            self.cnode = next_node
+            next_node = self.cnode.choose_path()
+            if next_node:
+                self.move_to(next_node.pos)
+                next_node.visited = True
+                if not self.win() and not self.lose():
+                    if not next_node.has_childs():
+                        next_node.set_childs(self.discover())
+                self.cnode = next_node
+                return True
+        return False
 
 
     def backward(self):
@@ -80,12 +83,16 @@ class GameSolver(GameSession):
 
 
     def find_all_solutions(self):
-
         self.cnode = self.root
         count_move = 0
+
         while not self.win() and not self.lose():
-            self.forward()
+            moved = self.forward()
             count_move += 1
+            if not moved:
+                self.backward()
+                count_move += 1
+
         logging.info(
             "Game ended after %s moves at %s :  %s",
             count_move, self.current_pos(), self.play.message
