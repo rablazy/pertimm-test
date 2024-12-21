@@ -1,12 +1,12 @@
 import enum
 import logging
 from datetime import datetime
-from operator import attrgetter
 from typing import List
 
 __all__ = ['Play', 'BoxTypeEnum', 'Box', 'Node']
 
 logging.basicConfig(level="DEBUG", format='%(asctime)s %(levelname)s %(message)s')
+
 
 class Play:
 
@@ -42,23 +42,27 @@ class Box:
             return False
         return self.x == other.x and self.y == other.y
 
+    def is_home(self):
+        return self.role == BoxTypeEnum.HOME
+
+    def is_stop(self):
+        return self.role == BoxTypeEnum.STOP
+
 
 class Node:
 
     def __init__(
         self,
         pos:Box,
-        parent: Box = None,
-        moves : List[Box] = [],
-        visited: bool = False,
-        last_visited = None
+        parent: "Node" = None,
+        childs : List[Box] = []
     ):
         self.pos = pos
         self.parent = parent
         self.childs = []
-        self.set_childs(moves)
-        self.visited = visited
-        self.last_visited = last_visited
+        self.set_childs(childs)
+        self.last_visited = None
+        self.visited = False
 
 
     def __str__(self) -> str:
@@ -72,6 +76,7 @@ class Node:
     @visited.setter
     def visited(self, value):
         self._visited = value
+        self.last_visited = datetime.now()
 
     @property
     def last_visited(self) -> datetime:
@@ -81,12 +86,13 @@ class Node:
     def last_visited(self, value):
         self._last_visited = value
 
+    def parent_pos(self) -> Box:
+        return self.parent.pos if self.parent else None
+
     def set_childs(self, moves : List[Box]) -> None:
         if moves:
             for m in moves:
-                # do not add parent or self to childs
-                parent_pos = self.parent.pos if self.parent else None
-                if not m == parent_pos and not m == self.pos:
+                if m.move and not m == self.pos and not m in self.previous_pos() :
                     self.add_child(m)
 
     def add_child(self, child:Box) -> None:
@@ -101,6 +107,23 @@ class Node:
     def choose_path(self) -> "Node":
         paths = list(filter(lambda x : x.reachable() and not x.visited, self.childs))
         return paths[0] if paths else None
+
+    def is_leaf(self) -> bool:
+        return self.childs is None or len(self.childs) == 0
+
+    def is_root(self) -> bool:
+        return self.parent is None
+
+    def previous_pos(self) -> List[Box]:
+        result = []
+        s = self.parent
+        while s is not None:
+            result.append(s.pos)
+            s = s.parent
+        result.reverse()
+        return result
+
+
 
 
 
