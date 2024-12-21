@@ -1,11 +1,12 @@
 import enum
-import posix
+import logging
 from datetime import datetime
 from operator import attrgetter
 from typing import List
 
 __all__ = ['Play', 'BoxTypeEnum', 'Box', 'Node']
 
+logging.basicConfig(level="DEBUG", format='%(asctime)s %(levelname)s %(message)s')
 
 class Play:
 
@@ -24,15 +25,15 @@ class BoxTypeEnum(enum.Enum):
 
 class Box:
 
-    def __init__(self, x:int, y:int, move:bool, box_type:str):
+    def __init__(self, x:int, y:int, move:bool, role:str):
         self.x = x
         self.y = y
         self.move = move
-        self.box_type = BoxTypeEnum(box_type).name
+        self.role = BoxTypeEnum(role).name
 
 
     def __str__(self):
-        return f"({self.x}, {self.y}):{self.box_type}"
+        return f"({self.x}, {self.y}):{self.role}"
 
     def __eq__(self, other):
         if not isinstance(other, Box):
@@ -63,29 +64,6 @@ class Node:
     def __str__(self) -> str:
         return f"{ self.pos}, visited: {self.visited}, on: {self.last_visited} \nchilds => { ' - '.join(c.pos.__str__() for c in self.childs)} "
 
-    def set_childs(self, moves : List[Box]) -> None:
-        if moves:
-            for m in moves:
-                parent_pos = self.parent.pos if self.parent else None
-                if not m == parent_pos and not m == self.pos:
-                    self.add_child(m)
-
-    def add_child(self, child:Box) -> None:
-        self.childs.append(Node(child, self))
-
-    def has_childs(self) -> bool:
-        return len(self.childs) > 0 if self.childs else False
-
-    def reachable(self) -> bool:
-        return self.pos.move
-
-    def choose_path(self) -> "Node":
-        paths = list(filter(lambda x : x.reachable(), self.childs))
-        paths  = sorted(paths, key = lambda x : (x.visited, x.last_visited))
-        for p in paths:
-            print(p.pos)
-        return paths[0] if paths else None
-
 
     @property
     def visited(self) -> bool:
@@ -102,5 +80,28 @@ class Node:
     @last_visited.setter
     def last_visited(self, value):
         self._last_visited = value
+
+    def set_childs(self, moves : List[Box]) -> None:
+        if moves:
+            for m in moves:
+                # do not add parent or self to childs
+                parent_pos = self.parent.pos if self.parent else None
+                if not m == parent_pos and not m == self.pos:
+                    self.add_child(m)
+
+    def add_child(self, child:Box) -> None:
+        self.childs.append(Node(child, self))
+
+    def has_childs(self) -> bool:
+        return len(self.childs) > 0 if self.childs else False
+
+    def reachable(self) -> bool:
+        return self.pos.move
+
+    def choose_path(self) -> "Node":
+        paths = list(filter(lambda x : x.reachable() and not x.visited, self.childs))
+        return paths[0] if paths else None
+
+
 
 

@@ -1,6 +1,6 @@
 import logging
 
-from .models import Box, Node, Play
+from .models import Box, Play
 from .query import *
 from .urls import *
 
@@ -13,11 +13,11 @@ class GameSession(object):
         self.play = None
 
     def start(self):
-        logging.debug("Starting game for player: %s", self.player_name)
+        logging.info("Starting game for player: %s", self.player_name)
         response = post(START_URL, dict(player=self.player_name))
         if response["player"]:
             self.play = Play(**response)
-            logging.debug("Game started, player at pos %s", self.current_pos())
+            logging.info("Game started, player at pos %s", self.current_pos())
             return True
         return False
 
@@ -33,13 +33,11 @@ class GameSession(object):
         return None
 
     def discover(self):
-        logging.debug("Discover map ..")
+        logging.info("Discover map ..")
         moves = []
         if self.play:
             paths = get(self.play.url_discover)
-            logging.debug("Possible moves: ")
             for path in paths:
-                #if path["move"]:
                 box = Box(path["x"], path["y"], path["move"], path["value"])
                 moves.append(box)
                 logging.debug(box)
@@ -47,8 +45,7 @@ class GameSession(object):
 
     def move_to(self, box: Box):
         if self.play:
-            logging.debug("moving to x: %s, y: %s ...", box.x, box.y)
+            logging.info("Moving to x: %s, y: %s ...", box.x, box.y)
             response = post(self.play.url_move, {"position_x" : box.x, "position_y": box.y})
-            print(response)
+            logging.debug(response)
             self.play = Play(**response)
-            logging.debug("current pos: %s", self.current_pos())

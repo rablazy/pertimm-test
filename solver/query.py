@@ -8,15 +8,18 @@ logger = logging.getLogger(__name__)
 
 #requests.packages.urllib3.add_stderr_logger()
 
-__all__ = ['HttpException', 'ApiException', 'get', 'post']
+__all__ = ['HttpError', 'ApiException', 'get', 'post']
 
 
 
-class HttpException(Exception):
+class HttpError(Exception):
     def __init__(self, message, code=None):
         self.code = code
         self.message = message
         super().__init__(self.message)
+
+    def __str__(self) -> str:
+        return f"HTTP {self.code} : {self.message}"
 
 class ApiException(Exception):...
 
@@ -28,7 +31,7 @@ def get(url: str, payload:Dict={}):
             data = response.json()
             return data
         else:
-            raise HttpException(response.reason, response.status_code)
+            raise HttpError(response.reason, response.status_code)
     except Exception as e:
        raise ApiException(e.message)
 
@@ -44,6 +47,6 @@ def post(url: str, payload=None):
             data = response.json()
             return data
         else:
-            raise HttpException(response.reason, response.status_code)
+            raise HttpError(response.reason, response.status_code)
     except Exception as e:
        raise ApiException(e.message)
