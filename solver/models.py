@@ -1,9 +1,8 @@
 import enum
 import logging
-from datetime import datetime
-from typing import List
+from typing import Generator, Iterable, List
 
-__all__ = ['Play', 'BoxTypeEnum', 'Box', 'Node']
+__all__ = ['Play', 'BoxTypeEnum', 'Box', 'Node', 'get_unvisited_leaves', 'printTree']
 
 logging.basicConfig(level="DEBUG", format='%(asctime)s %(levelname)s %(message)s')
 
@@ -32,7 +31,10 @@ class Box:
         self.role = BoxTypeEnum(role).name
 
 
-    def __str__(self):
+    def __str__(self) -> str:
+        return f"({self.x}, {self.y})"
+
+    def __repr__(self) -> str:
         return f"({self.x}, {self.y}):{self.role}"
 
     def __eq__(self, other):
@@ -61,12 +63,11 @@ class Node:
         self.parent = parent
         self.childs = []
         self.set_childs(childs)
-        self.last_visited = None
         self.visited = False
 
 
-    def __str__(self) -> str:
-        return f"{ self.pos}, visited: {self.visited}, on: {self.last_visited} \nchilds => { ' - '.join(c.pos.__str__() for c in self.childs)} "
+    def __repr__(self) -> str:
+        return f"{ self.pos}, parent: {self.parent_pos()}, visited: {self.visited} \nchilds => { ' - '.join(c.pos.__str__() for c in self.childs)} "
 
 
     @property
@@ -76,36 +77,12 @@ class Node:
     @visited.setter
     def visited(self, value):
         self._visited = value
-        self.last_visited = datetime.now()
-
-    @property
-    def last_visited(self) -> datetime:
-        return self._last_visited
-
-    @last_visited.setter
-    def last_visited(self, value):
-        self._last_visited = value
-
-    def parent_pos(self) -> Box:
-        return self.parent.pos if self.parent else None
-
-    def set_childs(self, moves : List[Box]) -> None:
-        if moves:
-            for m in moves:
-                if m.move and not m == self.pos and not m in self.previous_pos() :
-                    self.add_child(m)
 
     def add_child(self, child:Box) -> None:
         self.childs.append(Node(child, self))
 
-    def has_childs(self) -> bool:
-        return len(self.childs) > 0 if self.childs else False
-
-    def reachable(self) -> bool:
-        return self.pos.move
-
     def choose_path(self) -> "Node":
-        paths = list(filter(lambda x : x.reachable() and not x.visited, self.childs))
+        paths = list(filter(lambda x : x.reachable() and not x.visited, self.childs)) #
         return paths[0] if paths else None
 
     def is_leaf(self) -> bool:
@@ -114,7 +91,13 @@ class Node:
     def is_root(self) -> bool:
         return self.parent is None
 
-    def previous_pos(self) -> List[Box]:
+    def has_childs(self) -> bool:
+        return len(self.childs) > 0 if self.childs else False
+
+    def parent_pos(self) -> Box:
+        return self.parent.pos if self.parent else None
+
+    def ancestor_pos(self) -> List[Box]:
         result = []
         s = self.parent
         while s is not None:
@@ -122,6 +105,36 @@ class Node:
             s = s.parent
         result.reverse()
         return result
+
+    def reachable(self) -> bool:
+        return self.pos.move
+
+    def set_childs(self, moves : Iterable[Box]) -> None:
+        for m in moves:
+            if not m == self.pos and not m == self.parent_pos() :
+                self.add_child(m)
+
+
+def get_unvisited_leaves(node: Node) -> Generator[Node, None, None]:
+    if not node.childs and not node.visited and node.pos.move:
+        yield node
+
+    for child in node.childs:
+        for leaf in get_unvisited_leaves(child):
+            yield leaf
+
+
+def printTree(root: Node, level=0):
+    print("  " * level, root.pos.__repr__())
+    for child in root.childs:
+        printTree(child, level + 1)
+
+
+
+
+
+
+
 
 
 
