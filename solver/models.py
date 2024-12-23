@@ -2,9 +2,11 @@ import enum
 import logging
 from typing import Generator, Iterable, List
 
-__all__ = ['Play', 'BoxTypeEnum', 'Box', 'Node', 'get_unvisited_leaves', 'printTree']
+__all__ = ['Play', 'CellType', 'Cell', 'Node',
+           'get_unvisited_leaves', 'printTree']
 
-logging.basicConfig(level="DEBUG", format='%(asctime)s %(levelname)s %(message)s')
+logging.basicConfig(
+    level="DEBUG", format='%(asctime)s %(levelname)s %(message)s')
 
 
 class Play:
@@ -14,7 +16,7 @@ class Play:
             self.__dict__.update(kwargs)
 
 
-class BoxTypeEnum(enum.Enum):
+class CellType(enum.StrEnum):
     WALL = "wall"
     PATH = "path"
     TRAP = "trap"
@@ -22,14 +24,13 @@ class BoxTypeEnum(enum.Enum):
     STOP = "stop"
 
 
-class Box:
+class Cell:
 
-    def __init__(self, x:int, y:int, move:bool, role:str):
+    def __init__(self, x: int, y: int, move: bool = True, role: str = "path"):
         self.x = x
         self.y = y
         self.move = move
-        self.role = BoxTypeEnum(role).name
-
+        self.role = CellType(role)
 
     def __str__(self) -> str:
         return f"({self.x}, {self.y})"
@@ -38,37 +39,43 @@ class Box:
         return f"({self.x}, {self.y}):{self.role}"
 
     def __eq__(self, other):
-        if not isinstance(other, Box):
+        if not isinstance(other, Cell):
             return False
         if other is None:
             return False
         return self.x == other.x and self.y == other.y
 
+    def at(self, x: int, y: int) -> bool:
+        return self.x == x and self.y == y
+
     def is_home(self):
-        return self.role == BoxTypeEnum.HOME
+        return self.role == CellType.HOME
 
     def is_stop(self):
-        return self.role == BoxTypeEnum.STOP
+        return self.role == CellType.STOP
 
 
 class Node:
 
     def __init__(
         self,
-        pos:Box,
+        pos: Cell,
         parent: "Node" = None,
-        childs : List[Box] = []
+        childs: List[Cell] = []
     ):
-        self.pos = pos
-        self.parent = parent
-        self.childs = []
+        self.pos: Cell = pos
+        self.parent: Node = parent
+        self.childs: List[Node] = []
         self.set_childs(childs)
         self.visited = False
 
-
     def __repr__(self) -> str:
-        return f"{ self.pos}, parent: {self.parent_pos()}, visited: {self.visited} \nchilds => { ' - '.join(c.pos.__str__() for c in self.childs)} "
-
+        return f"""
+            {self.pos},
+            parent: {self.parent_pos()},
+            visited: {self.visited}
+            childs => { ' - '.join(c.pos.__repr__() for c in self.childs)}
+        """
 
     @property
     def visited(self) -> bool:
@@ -78,11 +85,15 @@ class Node:
     def visited(self, value):
         self._visited = value
 
-    def add_child(self, child:Box) -> None:
+    def add_child(self, child: Cell) -> None:
         self.childs.append(Node(child, self))
 
+    def child(self, n):
+        return self.childs[n] if self.childs else None
+
     def choose_path(self) -> "Node":
-        paths = list(filter(lambda x : x.reachable() and not x.visited, self.childs)) #
+        paths = list(filter(lambda x: x.reachable()
+                     and not x.visited, self.childs))
         return paths[0] if paths else None
 
     def is_leaf(self) -> bool:
@@ -94,10 +105,10 @@ class Node:
     def has_childs(self) -> bool:
         return len(self.childs) > 0 if self.childs else False
 
-    def parent_pos(self) -> Box:
+    def parent_pos(self) -> Cell:
         return self.parent.pos if self.parent else None
 
-    def ancestor_pos(self) -> List[Box]:
+    def ancestor_pos(self) -> List[Cell]:
         result = []
         s = self.parent
         while s is not None:
@@ -109,9 +120,9 @@ class Node:
     def reachable(self) -> bool:
         return self.pos.move
 
-    def set_childs(self, moves : Iterable[Box]) -> None:
+    def set_childs(self, moves: Iterable[Cell]) -> None:
         for m in moves:
-            if not m == self.pos and not m == self.parent_pos() :
+            if not m == self.pos and not m == self.parent_pos():
                 self.add_child(m)
 
 
@@ -128,16 +139,3 @@ def printTree(root: Node, level=0):
     print("  " * level, root.pos.__repr__())
     for child in root.childs:
         printTree(child, level + 1)
-
-
-
-
-
-
-
-
-
-
-
-
-

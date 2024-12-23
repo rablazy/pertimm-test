@@ -1,11 +1,12 @@
 import logging
 
-from .models import (Box, BoxTypeEnum, Node, Play, get_unvisited_leaves,
-                     printTree)
+from .models import Cell, CellType, Node, Play, get_unvisited_leaves, printTree
 from .query import *
 from .urls import *
 
-logging.basicConfig(level="DEBUG", format='%(asctime)s %(levelname)s %(message)s')
+logging.basicConfig(
+    level="DEBUG", format='%(asctime)s %(levelname)s %(message)s')
+
 
 class GameSession(object):
 
@@ -39,15 +40,16 @@ class GameSession(object):
         if self.play:
             paths = get(self.play.url_discover)
             for path in paths:
-                box = Box(path["x"], path["y"], path["move"], path["value"])
-                moves.append(box)
-                logging.debug(box.__repr__())
+                cell = Cell(path["x"], path["y"], path["move"], path["value"])
+                moves.append(cell)
+                logging.debug(cell.__repr__())
         return moves
 
-    def move_to(self, box: Box):
+    def move_to(self, cell: Cell):
         if self.play:
-            logging.info("Moving to x: %s, y: %s ...", box.x, box.y)
-            response = post(self.play.url_move, {"position_x" : box.x, "position_y": box.y})
+            logging.info("Moving to x: %s, y: %s ...", cell.x, cell.y)
+            response = post(self.play.url_move, {
+                            "position_x": cell.x, "position_y": cell.y})
             logging.debug(response)
             self.play = Play(**response)
 
@@ -61,39 +63,36 @@ class GameSolver(GameSession):
         self._init_root()
         self.cnode = None
 
-
     def restart(self):
         self.start()
         self.cnode = self.root
-
 
     def forward(self, to_node=None):
         if self.cnode:
             if not to_node:
                 to_node = self.cnode.choose_path() or self.cnode.parent
-            if to_node and not to_node.is_root(): # do not allow go back to root
+            if to_node and not to_node.is_root():  # do not allow go back to root
                 self.move_to(to_node.pos)
                 to_node.visited = True
                 if not self.win() and not self.lose():
                     if not to_node.has_childs():
-                        to_node.set_childs(filter(lambda x : x.move, self.discover()))
+                        to_node.set_childs(
+                            filter(lambda x: x.move, self.discover()))
                 self.cnode = to_node
                 return True
         return False
-
 
     def backward(self):
         if self.cnode and not self.cnode.is_root():
             self.move_to(self.cnode.parent_pos())
             self.cnode = self.cnode.parent
 
-
     def find_first_solution(self):
         self.cnode = self.root
         path = [self.root.pos]
 
         while not self.win():
-            if self.forward() :
+            if self.forward():
                 path.append(self.cnode.pos)
             else:
                 break
@@ -106,7 +105,6 @@ class GameSolver(GameSession):
             return path
 
         return None
-
 
     def find_all_solutions(self):
         self.cnode = self.root
@@ -123,9 +121,10 @@ class GameSolver(GameSession):
                     self.restart()
                     leaves.sort(key=lambda leaf: leaf.pos.x)
                     preferred_path = leaves[0]
-                    logging.debug("+++++ Using path to leaf %s", preferred_path.pos)
+                    logging.debug("+++++ Using path to leaf %s",
+                                  preferred_path.pos)
                     ancestor_pos = preferred_path.ancestor_pos()
-                    for p in ancestor_pos[1:]:
+                    for p in ancestor_pos[1:]:  # skip root in rerunning path
                         self.move_to(p)
                         path.append(p)
                     self.cnode = preferred_path
@@ -144,7 +143,8 @@ class GameSolver(GameSession):
                     "Solution found after %s moves at %s :  %s",
                     len(path), self.current_pos(), self.play.message
                 )
-                logging.info("***************************************************************************")
+                logging.info(
+                    "***************************************************************************")
 
             first_run = False
             leaves = list(get_unvisited_leaves(self.root))
@@ -156,13 +156,11 @@ class GameSolver(GameSession):
 
         return solutions
 
-
     def _init_root(self):
         start_x, start_y = self.current_pos()
         if self.root is None:
             self.root = Node(
-                Box(start_x, start_y, True, BoxTypeEnum.HOME.value),
-                childs = list(filter(lambda x : x.move, self.discover()))
+                Cell(start_x, start_y, True, CellType.HOME.value),
+                childs=list(filter(lambda x: x.move, self.discover()))
             )
             self.root.visited = True
-
