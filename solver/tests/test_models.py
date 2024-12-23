@@ -45,7 +45,7 @@ def test_node():
     assert (leaf1.pos.at(3, 2))
 
     path_to_leaf1 = leaf1.ancestor_pos()
-    assert (path_to_leaf1 is not None and len(path_to_leaf1) == 2)
+    assert (path_to_leaf1 is not None and len(path_to_leaf1) == 3)
     assert (path_to_leaf1[0].at(1, 2))
     assert (path_to_leaf1[1].at(2, 2))
 

@@ -1,11 +1,21 @@
+
 import logging
+import os
+from typing import List
+
+from dotenv import load_dotenv
 
 from .models import Cell, CellType, Node, Play, get_unvisited_leaves, printTree
-from .query import *
 from .urls import *
 
 logging.basicConfig(
     level="DEBUG", format='%(asctime)s %(levelname)s %(message)s')
+
+load_dotenv()
+if os.getenv('TEST'):
+    from .fake_query import get, post
+else:
+    from .query import *
 
 
 class GameSession(object):
@@ -32,9 +42,9 @@ class GameSession(object):
     def current_pos(self):
         if self.play:
             return self.play.position_x - 1, self.play.position_y - 1
-        return None
+        return None, None
 
-    def discover(self):
+    def discover(self) -> List[Cell]:
         logging.info("Discover map ..")
         moves = []
         if self.play:
@@ -70,19 +80,20 @@ class GameSolver(GameSession):
     def forward(self):
         if self.cnode:
             to_node = self.cnode.choose_path()
-            if to_node and not to_node.is_root():  # do not allow go back to root
+            if to_node and not to_node.pos.is_home():  # do not allow go back to root
                 self.move_to(to_node.pos)
                 to_node.visited = True
                 if not self.win() and not self.lose():
                     if not to_node.has_childs():
                         to_node.set_childs(
-                            filter(lambda x: x.move, self.discover()))
+                            filter(lambda x: x.move and not x.is_trap(), self.discover()))
                 self.cnode = to_node
+                # logging.debug(self.cnode)
                 return True
         return False
 
     def backward(self):
-        if self.cnode and not self.cnode.is_root():
+        if self.cnode and not self.cnode.pos.is_home():
             self.move_to(self.cnode.parent_pos())
             self.cnode = self.cnode.parent
 
@@ -90,15 +101,20 @@ class GameSolver(GameSession):
         self.cnode = self.root
         path = [self.root.pos]
 
-        while not self.win():
+        while not self.win() and not self.lose():
             if self.forward():
                 path.append(self.cnode.pos)
             else:
                 if self.cnode.parent:
                     self.backward()
-                    path.pop()
+                    if path:
+                        path.pop()
                 else:
                     break
+
+        if self.lose():
+            logging.info("You lose at %s : %s",
+                         self.current_pos(), self.play.message)
 
         if self.win():
             logging.info(
@@ -113,13 +129,14 @@ class GameSolver(GameSession):
         self.cnode = self.root
         first_run = True
 
-        path = []
         leaves = []
         solutions = []
 
         while first_run or leaves:
-            path = [self.root.pos]
-            if not first_run:
+            if first_run:
+                path = [self.root.pos]
+            else:
+                path = []
                 if leaves:
                     self.restart()
                     leaves.sort(key=lambda leaf: leaf.pos.x)
@@ -127,28 +144,37 @@ class GameSolver(GameSession):
                     logging.debug("+++++ Using path to leaf %s",
                                   preferred_path.pos)
                     ancestor_pos = preferred_path.ancestor_pos()
-                    for p in ancestor_pos[1:]:  # skip root in rerunning path
+                    # print('ancestor pos ::::::')
+                    # print(*ancestor_pos, sep=' -> ')
+                    for p in ancestor_pos:
                         self.move_to(p)
                         path.append(p)
                     self.cnode = preferred_path
                 else:
                     break
 
-            while not self.win():
+            while not self.win() and not self.lose():
                 if self.forward():
                     path.append(self.cnode.pos)
                 else:
                     if self.cnode.parent:
                         self.backward()
-                        path.pop()
+                        if path:
+                            path.pop()
                     else:
                         break
+
+            if self.lose():
+                logging.info("You lose at %s : %s",
+                             self.current_pos(), self.play.message)
+                return []
 
             if self.win():
                 logging.info(
                     "Solution found after %s moves at %s :  %s",
                     len(path), self.current_pos(), self.play.message
                 )
+                print(*path, sep=" -> ")
                 logging.info(
                     "************************************************")
                 solutions.append(path.copy())
@@ -159,6 +185,8 @@ class GameSolver(GameSession):
             for leaf in leaves:
                 logging.debug(leaf.__repr__())
 
+            # input()
+
         # printTree(self.root)
         return solutions
 
@@ -167,6 +195,7 @@ class GameSolver(GameSession):
         if self.root is None:
             self.root = Node(
                 Cell(start_x, start_y, True, CellType.HOME.value),
-                childs=list(filter(lambda x: x.move, self.discover()))
+                childs=list(
+                    filter(lambda x: x.move and not x.is_trap(), self.discover()))
             )
             self.root.visited = True

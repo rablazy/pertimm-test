@@ -54,6 +54,9 @@ class Cell:
     def is_stop(self):
         return self.role == CellType.STOP
 
+    def is_trap(self):
+        return self.role == CellType.TRAP
+
 
 class Node:
 
@@ -65,6 +68,7 @@ class Node:
     ):
         self.pos: Cell = pos
         self.parent: Node = parent
+        self.track_pos = None
         self.childs: List[Node] = []
         self.set_childs(childs)
         self.visited = False
@@ -88,12 +92,24 @@ class Node:
     def add_child(self, child: Cell) -> None:
         self.childs.append(Node(child, self))
 
+    def ancestor_pos(self) -> List[Cell]:
+        """All positions from root to this current node position"""
+        if not self.track_pos:
+            result = [self.pos]
+            s = self.parent
+            while s is not None:
+                result.append(s.pos)
+                s = s.parent
+            result.reverse()
+            self.track_pos = result
+        return self.track_pos
+
     def child(self, n):
         return self.childs[n] if self.childs else None
 
     def choose_path(self) -> "Node":
         paths = list(filter(lambda x: x.reachable()
-                     and not x.visited, self.childs))
+                     and not x.visited and not x.pos in self.ancestor_pos(), self.childs))
         return paths[0] if paths else None
 
     def is_leaf(self) -> bool:
@@ -108,21 +124,12 @@ class Node:
     def parent_pos(self) -> Cell:
         return self.parent.pos if self.parent else None
 
-    def ancestor_pos(self) -> List[Cell]:
-        result = []
-        s = self.parent
-        while s is not None:
-            result.append(s.pos)
-            s = s.parent
-        result.reverse()
-        return result
-
     def reachable(self) -> bool:
         return self.pos.move
 
     def set_childs(self, moves: Iterable[Cell]) -> None:
         for m in moves:
-            if not m == self.pos and not m == self.parent_pos():
+            if not m in self.ancestor_pos():  # not m == self.pos and not m == self.parent_pos(
                 self.add_child(m)
 
 

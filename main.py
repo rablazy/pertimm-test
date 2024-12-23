@@ -39,11 +39,13 @@ if __name__ == "__main__":
             solutions = solver.find_all_solutions()
 
         if solutions:
-            for solution in solutions:
-                logging.info("--- Solution after %s moves:", len(solution))
+            logging.info("\n\n ------ Found %s ------", len(solutions))
+            for i, solution in enumerate(solutions):
+                logging.info("Solution (%s) after %s moves:",
+                             i+1, len(solution))
                 print(*solution, sep=" -> ")
         else:
-            logging.info("Found no solution :(")
+            logging.info("Found no solution :((")
 
     except (HttpError, ApiException) as e:
         logging.error("Game aborted : %s", e)
