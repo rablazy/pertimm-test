@@ -67,10 +67,9 @@ class GameSolver(GameSession):
         self.start()
         self.cnode = self.root
 
-    def forward(self, to_node=None):
+    def forward(self):
         if self.cnode:
-            if not to_node:
-                to_node = self.cnode.choose_path() or self.cnode.parent
+            to_node = self.cnode.choose_path()
             if to_node and not to_node.is_root():  # do not allow go back to root
                 self.move_to(to_node.pos)
                 to_node.visited = True
@@ -95,11 +94,15 @@ class GameSolver(GameSession):
             if self.forward():
                 path.append(self.cnode.pos)
             else:
-                break
+                if self.cnode.parent:
+                    self.backward()
+                    path.pop()
+                else:
+                    break
 
         if self.win():
             logging.info(
-                "Game ended after %s moves at %s :  %s",
+                "Game win after %s moves at %s :  %s",
                 len(path), self.current_pos(), self.play.message
             )
             return path
@@ -110,9 +113,9 @@ class GameSolver(GameSession):
         self.cnode = self.root
         first_run = True
 
-        solutions = []
         path = []
         leaves = []
+        solutions = []
 
         while first_run or leaves:
             path = [self.root.pos]
@@ -135,16 +138,20 @@ class GameSolver(GameSession):
                 if self.forward():
                     path.append(self.cnode.pos)
                 else:
-                    break
+                    if self.cnode.parent:
+                        self.backward()
+                        path.pop()
+                    else:
+                        break
 
             if self.win():
-                solutions.append(path.copy())
                 logging.info(
                     "Solution found after %s moves at %s :  %s",
                     len(path), self.current_pos(), self.play.message
                 )
                 logging.info(
-                    "***************************************************************************")
+                    "************************************************")
+                solutions.append(path.copy())
 
             first_run = False
             leaves = list(get_unvisited_leaves(self.root))
@@ -153,7 +160,6 @@ class GameSolver(GameSession):
                 logging.debug(leaf.__repr__())
 
         # printTree(self.root)
-
         return solutions
 
     def _init_root(self):
