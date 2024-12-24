@@ -2,4 +2,3 @@ requests
 randomname
 pytest
 pytest-cov
-python-dotenv

@@ -1,5 +1,9 @@
 <!-- GETTING STARTED -->
 <a id="readme-top"></a>
+
+## Status
+![GitHub CI](https://github.com/rablazy/pertimm-test/actions/workflows/ci.yml/badge.svg)
+
 ### Installation
 
 _Short guide to installation._
