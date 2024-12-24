@@ -165,6 +165,19 @@ class GameSolver(GameSession):
         # printTree(self.root)
         return solutions
 
+    @classmethod
+    def print_solutions(cls, solutions):
+        if solutions:
+            logging.info("\n\n------ Found %s solutions ------",
+                         len(solutions))
+            for i, solution in enumerate(solutions):
+                assert (len(solution) > 0)
+                logging.info("\nSolution #%s using %s moves:",
+                             i+1, len(solution) - 1)
+                print(*solution, sep=" -> ")
+        else:
+            logging.info("Found no solution :((")
+
     def _forward(self):
         if self.cnode:
             to_node = self.cnode.choose_path()
