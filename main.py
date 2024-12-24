@@ -41,8 +41,8 @@ if __name__ == "__main__":
         if solutions:
             logging.info("\n\n ------ Found %s ------", len(solutions))
             for i, solution in enumerate(solutions):
-                logging.info("Solution (%s) after %s moves:",
-                             i+1, len(solution))
+                logging.info("Solution (%s) using %s moves:",
+                             i+1, len(solution) - 1)
                 print(*solution, sep=" -> ")
         else:
             logging.info("Found no solution :((")

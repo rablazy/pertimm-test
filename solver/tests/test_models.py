@@ -4,9 +4,10 @@ from ..models import Cell, CellType, Node, get_unvisited_leaves
 def test_cell():
     home = Cell(1, 2, True, CellType.HOME.value)
     stop = Cell(10, 4, True, CellType.STOP.value)
-    assert (home.is_home())
-    assert (stop.is_stop())
-    assert (home != stop)
+    assert home.is_home()
+    assert stop.is_stop()
+    assert home != stop
+    assert home != int("6")
 
 
 def test_node():

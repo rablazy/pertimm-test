@@ -1,43 +1,36 @@
 
 import logging
-import os
 from typing import List
 
-from dotenv import load_dotenv
-
-from .models import Cell, CellType, Node, Play, get_unvisited_leaves, printTree
+from .models import (Cell, CellType, Node, Player, get_unvisited_leaves,
+                     printTree)
+from .query import ApiException
+from .settings import settings
 from .urls import *
 
 logging.basicConfig(
     level="DEBUG", format='%(asctime)s %(levelname)s %(message)s')
 
-load_dotenv()
-if os.getenv('TEST'):
+if settings.FAKE:
     from .fake_query import get, post
 else:
-    from .query import *
+    from .query import get, post
 
 
 class GameSession(object):
 
-    def __init__(self, player_name):
+    def __init__(self, player_name: str):
         self.player_name = player_name
-        self.play = None
+        self.play: Player = None
 
     def start(self):
         logging.info("Starting game for player: %s", self.player_name)
         response = post(START_URL, dict(player=self.player_name))
         if response["player"]:
-            self.play = Play(**response)
+            self.play = Player(**response)
             logging.info("Game started, player at pos %s", self.current_pos())
         else:
             raise ApiException("Game not started, player not set")
-
-    def win(self):
-        return self.play.win if self.play else False
-
-    def lose(self):
-        return self.play.dead if self.play else False
 
     def current_pos(self):
         if self.play:
@@ -61,7 +54,13 @@ class GameSession(object):
             response = post(self.play.url_move, {
                             "position_x": cell.x, "position_y": cell.y})
             logging.debug(response)
-            self.play = Play(**response)
+            self.play = Player(**response)
+
+    def lose(self):
+        return self.play.dead if self.play else False
+
+    def win(self):
+        return self.play.win if self.play else False
 
 
 class GameSolver(GameSession):
@@ -77,36 +76,16 @@ class GameSolver(GameSession):
         self.start()
         self.cnode = self.root
 
-    def forward(self):
-        if self.cnode:
-            to_node = self.cnode.choose_path()
-            if to_node and not to_node.pos.is_home():  # do not allow go back to root
-                self.move_to(to_node.pos)
-                to_node.visited = True
-                if not self.win() and not self.lose():
-                    if not to_node.has_childs():
-                        to_node.set_childs(
-                            filter(lambda x: x.move and not x.is_trap(), self.discover()))
-                self.cnode = to_node
-                # logging.debug(self.cnode)
-                return True
-        return False
-
-    def backward(self):
-        if self.cnode and not self.cnode.pos.is_home():
-            self.move_to(self.cnode.parent_pos())
-            self.cnode = self.cnode.parent
-
     def find_first_solution(self):
         self.cnode = self.root
         path = [self.root.pos]
 
         while not self.win() and not self.lose():
-            if self.forward():
+            if self._forward():
                 path.append(self.cnode.pos)
             else:
                 if self.cnode.parent:
-                    self.backward()
+                    self._backward()
                     if path:
                         path.pop()
                 else:
@@ -144,8 +123,6 @@ class GameSolver(GameSession):
                     logging.debug("+++++ Using path to leaf %s",
                                   preferred_path.pos)
                     ancestor_pos = preferred_path.ancestor_pos()
-                    # print('ancestor pos ::::::')
-                    # print(*ancestor_pos, sep=' -> ')
                     for p in ancestor_pos:
                         self.move_to(p)
                         path.append(p)
@@ -154,11 +131,11 @@ class GameSolver(GameSession):
                     break
 
             while not self.win() and not self.lose():
-                if self.forward():
+                if self._forward():
                     path.append(self.cnode.pos)
                 else:
                     if self.cnode.parent:
-                        self.backward()
+                        self._backward()
                         if path:
                             path.pop()
                     else:
@@ -175,8 +152,6 @@ class GameSolver(GameSession):
                     len(path), self.current_pos(), self.play.message
                 )
                 print(*path, sep=" -> ")
-                logging.info(
-                    "************************************************")
                 solutions.append(path.copy())
 
             first_run = False
@@ -189,6 +164,26 @@ class GameSolver(GameSession):
 
         # printTree(self.root)
         return solutions
+
+    def _forward(self):
+        if self.cnode:
+            to_node = self.cnode.choose_path()
+            if to_node and not to_node.pos.is_home():  # do not allow go back to root
+                self.move_to(to_node.pos)
+                to_node.visited = True
+                if not self.win() and not self.lose():
+                    if not to_node.has_childs():
+                        to_node.set_childs(
+                            filter(lambda x: x.move and not x.is_trap(), self.discover()))
+                self.cnode = to_node
+                # logging.debug(self.cnode)
+                return True
+        return False
+
+    def _backward(self):
+        if self.cnode and not self.cnode.pos.is_home():
+            self.move_to(self.cnode.parent_pos())
+            self.cnode = self.cnode.parent
 
     def _init_root(self):
         start_x, start_y = self.current_pos()

@@ -2,14 +2,14 @@ import enum
 import logging
 from typing import Generator, Iterable, List
 
-__all__ = ['Play', 'CellType', 'Cell', 'Node',
+__all__ = ['Player', 'CellType', 'Cell', 'Node',
            'get_unvisited_leaves', 'printTree']
 
 logging.basicConfig(
     level="DEBUG", format='%(asctime)s %(levelname)s %(message)s')
 
 
-class Play:
+class Player:
 
     def __init__(self, *args, **kwargs):
         if kwargs:
@@ -73,14 +73,6 @@ class Node:
         self.set_childs(childs)
         self.visited = False
 
-    def __repr__(self) -> str:
-        return f"""
-            {self.pos},
-            parent: {self.parent_pos()},
-            visited: {self.visited}
-            childs => { ' - '.join(c.pos.__repr__() for c in self.childs)}
-        """
-
     @property
     def visited(self) -> bool:
         return self._visited
@@ -90,7 +82,8 @@ class Node:
         self._visited = value
 
     def add_child(self, child: Cell) -> None:
-        self.childs.append(Node(child, self))
+        if not child in self.ancestor_pos():
+            self.childs.append(Node(child, self))
 
     def ancestor_pos(self) -> List[Cell]:
         """All positions from root to this current node position"""
@@ -112,14 +105,14 @@ class Node:
                      and not x.visited and not x.pos in self.ancestor_pos(), self.childs))
         return paths[0] if paths else None
 
+    def has_childs(self) -> bool:
+        return len(self.childs) > 0 if self.childs else False
+
     def is_leaf(self) -> bool:
         return self.childs is None or len(self.childs) == 0
 
     def is_root(self) -> bool:
         return self.parent is None
-
-    def has_childs(self) -> bool:
-        return len(self.childs) > 0 if self.childs else False
 
     def parent_pos(self) -> Cell:
         return self.parent.pos if self.parent else None
@@ -129,8 +122,15 @@ class Node:
 
     def set_childs(self, moves: Iterable[Cell]) -> None:
         for m in moves:
-            if not m in self.ancestor_pos():  # not m == self.pos and not m == self.parent_pos(
-                self.add_child(m)
+            self.add_child(m)
+
+    def __repr__(self) -> str:
+        return f"""
+            {self.pos},
+            parent: {self.parent_pos()},
+            visited: {self.visited}
+            childs => { ' - '.join(c.pos.__repr__() for c in self.childs)}
+        """
 
 
 def get_unvisited_leaves(node: Node) -> Generator[Node, None, None]:

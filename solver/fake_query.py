@@ -37,22 +37,23 @@ class Maze:
         self.player = None
         self.size = len(self.matrix)
 
-    def start(self, player):
-        self.player = player
-        for x in range(self.size):
-            for y in range(self.size):
-                if self.matrix[y][x] == 'H':
-                    self.home = Point(x, y)
-                    self.position = Point(x, y)
-                if self.matrix[y][x] == 'S':
-                    self.exit = Point(x, y)
-        if self.home is None:
-            raise ValueError("Home not set")
-        if self.exit is None:
-            raise ValueError("Exit not set")
+    def start(self, player_name):
+        self.player = player_name
+        if player_name:
+            for x in range(self.size):
+                for y in range(self.size):
+                    if self.matrix[y][x] == 'H':
+                        self.home = Point(x, y)
+                        self.position = Point(x, y)
+                    if self.matrix[y][x] == 'S':
+                        self.exit = Point(x, y)
+            if self.home is None:
+                raise ValueError("Home not set")
+            if self.exit is None:
+                raise ValueError("Exit not set")
 
-        self.dead = False
-        self.win = False
+            self.dead = False
+            self.win = False
 
         return self.response()
 
@@ -76,8 +77,8 @@ class Maze:
         return {
             "player": self.player,
             "message": message,
-            "position_x": self.position.x + 1,
-            "position_y": self.position.y + 1,
+            "position_x": self.position.x + 1 if self.position else None,
+            "position_y": self.position.y + 1 if self.position else None,
             "dead": self.dead,
             "win": self.win,
             "url_move": f"{self.player}/move/",
