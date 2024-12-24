@@ -170,6 +170,7 @@ class GameSolver(GameSession):
         if solutions:
             logging.info("\n\n------ Found %s solutions ------",
                          len(solutions))
+            solutions.sort(key=len)
             for i, solution in enumerate(solutions):
                 assert (len(solution) > 0)
                 logging.info("\nSolution #%s using %s moves:",
