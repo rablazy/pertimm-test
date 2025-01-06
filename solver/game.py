@@ -34,7 +34,7 @@ class GameSession(object):
 
     def current_pos(self):
         if self.play:
-            return self.play.position_x - 1, self.play.position_y - 1
+            return self.play.position_x, self.play.position_y
         return None, None
 
     def discover(self) -> List[Cell]:

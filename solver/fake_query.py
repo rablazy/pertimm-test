@@ -77,8 +77,8 @@ class Maze:
         return {
             "player": self.player,
             "message": message,
-            "position_x": self.position.x + 1 if self.position else None,
-            "position_y": self.position.y + 1 if self.position else None,
+            "position_x": self.position.x if self.position else None,
+            "position_y": self.position.y if self.position else None,
             "dead": self.dead,
             "win": self.win,
             "url_move": f"{self.player}/move/",
