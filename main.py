@@ -4,7 +4,7 @@ import logging
 import randomname
 
 from solver.game import GameSolver
-from solver.query import ApiException, HttpError
+from solver.query import ApiException
 
 logging.basicConfig(
     level="DEBUG", format='%(asctime)s %(levelname)s %(message)s')
@@ -40,5 +40,5 @@ if __name__ == "__main__":
 
         solver.print_solutions(solutions)
 
-    except (HttpError, ApiException) as e:
+    except ApiException as e:
         logging.error("Game aborted : %s", e)

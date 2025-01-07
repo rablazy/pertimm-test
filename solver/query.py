@@ -6,34 +6,25 @@ from requests.exceptions import RequestException
 
 logger = logging.getLogger(__name__)
 
-#requests.packages.urllib3.add_stderr_logger()
+# requests.packages.urllib3.add_stderr_logger()
 
-__all__ = ['HttpError', 'ApiException', 'get', 'post']
-
-
-
-class HttpError(Exception):
-    def __init__(self, message, code=None):
-        self.code = code
-        self.message = message
-        super().__init__(self.message)
-
-    def __str__(self) -> str:
-        return f"HTTP {self.code} : {self.message}"
-
-class ApiException(Exception):...
+__all__ = ['ApiException', 'get', 'post']
 
 
-def get(url: str, payload:Dict={}):
+class ApiException(Exception):
+    ...
+
+
+def get(url: str, payload: Dict = {}):
     try:
         response = requests.get(url, params=payload)
         if response.status_code == 200:
             data = response.json()
             return data
         else:
-            raise HttpError(response.reason, response.status_code)
+            response.raise_for_status()
     except Exception as e:
-       raise ApiException(e.message)
+        raise ApiException(e)
 
 
 def post(url: str, payload=None):
@@ -47,6 +38,6 @@ def post(url: str, payload=None):
             data = response.json()
             return data
         else:
-            raise HttpError(response.reason, response.status_code)
+            response.raise_for_status()
     except Exception as e:
-       raise ApiException(e.message)
+        raise ApiException(e)
