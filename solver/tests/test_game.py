@@ -1,6 +1,4 @@
 
-import logging
-
 import pytest
 
 from ..query import ApiException
@@ -8,9 +6,6 @@ from ..settings import settings  # noqa
 
 settings.FAKE = True  # noqa
 from ..game import GameSolver  # noqa
-
-logging.basicConfig(
-    level="DEBUG", format='%(asctime)s %(levelname)s %(message)s')
 
 
 def test_start_error():
