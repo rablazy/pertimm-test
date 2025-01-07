@@ -1,12 +1,8 @@
 import enum
-import logging
 from typing import Generator, Iterable, List
 
 __all__ = ['Player', 'CellType', 'Cell', 'Node',
            'get_unvisited_leaves', 'printTree']
-
-logging.basicConfig(
-    level="DEBUG", format='%(asctime)s %(levelname)s %(message)s')
 
 
 class Player:

@@ -8,8 +8,8 @@ from .query import ApiException
 from .settings import settings
 from .urls import *
 
-logging.basicConfig(
-    level="DEBUG", format='%(asctime)s %(levelname)s %(message)s')
+logger = logging.getLogger(__name__)
+
 
 if settings.FAKE:
     from .fake_query import get, post
@@ -24,11 +24,11 @@ class GameSession(object):
         self.play: Player = None
 
     def start(self):
-        logging.info("Starting game for player: %s", self.player_name)
+        logger.info("Starting game for player: %s", self.player_name)
         response = post(START_URL, dict(player=self.player_name))
         if response["player"]:
             self.play = Player(**response)
-            logging.info("Game started, player at pos %s", self.current_pos())
+            logger.info("Game started, player at pos %s", self.current_pos())
         else:
             raise ApiException("Game not started, player not set")
 
@@ -38,22 +38,22 @@ class GameSession(object):
         return None, None
 
     def discover(self) -> List[Cell]:
-        logging.info("Discover map ..")
+        logger.info("Discover map ..")
         moves = []
         if self.play:
             paths = get(self.play.url_discover)
             for path in paths:
                 cell = Cell(path["x"], path["y"], path["move"], path["value"])
                 moves.append(cell)
-                logging.debug(cell.__repr__())
+                logger.debug(cell.__repr__())
         return moves
 
     def move_to(self, cell: Cell):
         if self.play:
-            logging.info("Moving to x: %s, y: %s ...", cell.x, cell.y)
+            logger.info("Moving to x: %s, y: %s ...", cell.x, cell.y)
             response = post(self.play.url_move, {
                             "position_x": cell.x, "position_y": cell.y})
-            logging.debug(response)
+            logger.debug(response)
             self.play = Player(**response)
 
     def lose(self):
@@ -92,11 +92,11 @@ class GameSolver(GameSession):
                     break
 
         if self.lose():
-            logging.info("You lose at %s : %s",
-                         self.current_pos(), self.play.message)
+            logger.info("You lose at %s : %s",
+                        self.current_pos(), self.play.message)
 
         if self.win():
-            logging.info(
+            logger.info(
                 "Game win after %s moves at %s :  %s",
                 len(path), self.current_pos(), self.play.message
             )
@@ -120,8 +120,8 @@ class GameSolver(GameSession):
                     self.restart()
                     leaves.sort(key=lambda leaf: leaf.pos.x)
                     preferred_path = leaves[0]
-                    logging.debug("+++++ Using path to leaf %s",
-                                  preferred_path.pos)
+                    logger.debug("+++++ Using path to leaf %s",
+                                 preferred_path.pos)
                     ancestor_pos = preferred_path.ancestor_pos()
                     for p in ancestor_pos:
                         self.move_to(p)
@@ -142,12 +142,12 @@ class GameSolver(GameSession):
                         break
 
             if self.lose():
-                logging.info("You lose at %s : %s",
-                             self.current_pos(), self.play.message)
+                logger.info("You lose at %s : %s",
+                            self.current_pos(), self.play.message)
                 return []
 
             if self.win():
-                logging.info(
+                logger.info(
                     "Solution found after %s moves at %s :  %s",
                     len(path), self.current_pos(), self.play.message
                 )
@@ -156,9 +156,9 @@ class GameSolver(GameSession):
 
             first_run = False
             leaves = list(get_unvisited_leaves(self.root))
-            logging.debug(f"Unexplored nodes ===>")
+            logger.debug(f"Unexplored nodes ===>")
             for leaf in leaves:
-                logging.debug(leaf.__repr__())
+                logger.debug(leaf.__repr__())
 
             # input()
 
@@ -168,16 +168,16 @@ class GameSolver(GameSession):
     @classmethod
     def print_solutions(cls, solutions):
         if solutions:
-            logging.info("\n\n------ Found %s solutions ------",
-                         len(solutions))
+            logger.info("\n\n------ Found %s solutions ------",
+                        len(solutions))
             solutions.sort(key=len)
             for i, solution in enumerate(solutions):
                 assert (len(solution) > 0)
-                logging.info("\nSolution #%s using %s moves:",
-                             i+1, len(solution) - 1)
+                logger.info("\nSolution #%s using %s moves:",
+                            i+1, len(solution) - 1)
                 print(*solution, sep=" -> ")
         else:
-            logging.info("Found no solution :((")
+            logger.info("Found no solution :((")
 
     def _forward(self):
         if self.cnode:
@@ -190,7 +190,7 @@ class GameSolver(GameSession):
                         to_node.set_childs(
                             filter(lambda x: x.move and not x.is_trap(), self.discover()))
                 self.cnode = to_node
-                # logging.debug(self.cnode)
+                # logger.debug(self.cnode)
                 return True
         return False
 
